@@ -1,65 +1,202 @@
-import Image from "next/image";
+'use client';
+import { useState, FormEvent } from 'react';
+import { ShieldCheck, Mail, Lock, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
 
-export default function Home() {
+export default function Login() {
+  const [email, setEmail] = useState<string>('');
+  const [senha, setSenha] = useState<string>('');
+  const [erro, setErro] = useState<string>('');
+  const [carregando, setCarregando] = useState<boolean>(false);
+
+  const handleLogin = async (e: FormEvent) => {
+    e.preventDefault();
+    setErro(''); // Limpa erros antigos
+    setCarregando(true); // Ativa o estado de carregamento no botão
+
+    try {
+      // Lendo dinamicamente a URL da API através da variável de ambiente
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      
+      if (!apiUrl) {
+        throw new Error('Configuração do servidor não encontrada (.env.local ausente).');
+      }
+
+      const resposta = await fetch(`${apiUrl}/api/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, senha }),
+      });
+
+      const dados = await resposta.json();
+
+      if (!resposta.ok) {
+        // Se o back-end devolveu erro (status 400 ou 500), exibe a mensagem na tela
+        throw new Error(dados.erro || 'Erro ao tentar fazer login.');
+      }
+
+      // Se deu tudo certo, guarda os dados do usuário na memória local do navegador
+      localStorage.setItem('@gtsconect:usuario', JSON.stringify(dados.usuario));
+      
+      console.log('Login efetuado com sucesso real!');
+      window.location.href = '/dashboard'; 
+
+    } catch (err) {
+      // 🔧 CORREÇÃO DO TYPESCRIPT: Captura o erro sem atribuir 'any' na assinatura e trata de forma segura
+      if (err instanceof Error) {
+        setErro(err.message);
+      } else {
+        setErro('Não foi possível conectar ao servidor.');
+      }
+    } finally {
+      setCarregando(false); // Desativa o carregamento
+    }
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <div className="flex min-h-screen bg-gray-50 text-gray-900">
+      
+      {/* COLUNA DA ESQUERDA: Formulário de Login */}
+      <div className="flex flex-col justify-center w-full px-8 py-12 bg-white lg:w-5/12 sm:px-16 md:px-24 shadow-2xl z-10">
+        <div className="w-full max-w-md mx-auto">
+          
+          {/* Logo / Identidade */}
+          <div className="flex items-center gap-2 mb-8 text-blue-600">
+            <ShieldCheck size={32} className="stroke-[2.5]" />
+            <span className="text-xl font-extrabold tracking-tight text-gray-900">GTS <span className="text-blue-600">CONECT</span></span>
+          </div>
+
+          {/* Títulos */}
+          <h2 className="text-3xl font-bold tracking-tight text-gray-950">
+            Seja bem-vindo de volta
+          </h2>
+          <p className="mt-2 text-sm text-gray-500 mb-8">
+            Insira suas credenciais corporativas para acessar o painel.
+          </p>
+
+          {/* Banner de Erro dinâmico vindo da API */}
+          {erro && (
+            <div className="flex items-start gap-2.5 p-3.5 mb-6 text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl animate-shake">
+              <AlertCircle size={18} className="shrink-0 mt-0.5" />
+              <span>{erro}</span>
+            </div>
+          )}
+
+          {/* Formulário */}
+          <form onSubmit={handleLogin} className="space-y-5">
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-600">
+                E-mail Corporativo
+              </label>
+              <div className="relative mt-1">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400">
+                  <Mail size={18} />
+                </div>
+                <input
+                  type="email"
+                  required
+                  disabled={carregando}
+                  className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all text-sm outline-none text-gray-900 placeholder-gray-400 disabled:opacity-60"
+                  placeholder="admin@gtsconect.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="flex justify-between items-center">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-gray-600">
+                  Senha de Acesso
+                </label>
+                <a href="#" className="text-xs font-medium text-blue-600 hover:underline">
+                  Esqueceu a senha?
+                </a>
+              </div>
+              <div className="relative mt-1">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400">
+                  <Lock size={18} />
+                </div>
+                <input
+                  type="password"
+                  required
+                  disabled={carregando}
+                  className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all text-sm outline-none text-gray-900 placeholder-gray-400 disabled:opacity-60"
+                  placeholder="••••••••"
+                  value={senha}
+                  onChange={(e) => setSenha(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Manter conectado Checkbox */}
+            <div className="flex items-center">
+              <input
+                id="remember-me"
+                type="checkbox"
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <label htmlFor="remember-me" className="ml-2 text-xs font-medium text-gray-500 select-none">
+                Lembrar deste dispositivo
+              </label>
+            </div>
+
+            {/* Botão de Entrar Dinâmico */}
+            <button
+              type="submit"
+              disabled={carregando}
+              className="flex items-center justify-center w-full gap-2 py-3.5 font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all shadow-lg shadow-blue-500/20 active:scale-[0.99] disabled:bg-blue-400 disabled:cursor-not-allowed"
+            >
+              {carregando ? (
+                <>
+                  <Loader2 className="animate-spin" size={18} />
+                  <span>Autenticando...</span>
+                </>
+              ) : (
+                <>
+                  <span>Entrar no Painel</span>
+                  <ArrowRight size={18} />
+                </>
+              )}
+            </button>
+          </form>
+
+        </div>
+      </div>
+
+      {/* COLUNA DA DIREITA */}
+      <div className="hidden lg:flex flex-col justify-between w-7/12 bg-gradient-to-br from-slate-900 via-indigo-950 to-blue-950 p-16 relative overflow-hidden">
+        <div className="absolute w-96 h-96 bg-blue-500/10 rounded-full blur-3xl -top-20 -right-20"></div>
+        <div className="absolute w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl -bottom-20 -left-20"></div>
+        <div></div>
+        <div className="max-w-xl space-y-6 relative z-10">
+          <span className="px-3 py-1 text-xs font-medium tracking-wide text-blue-400 bg-blue-500/10 rounded-full border border-blue-500/20">
+            Controle Total do Seu Negócio
+          </span>
+          <h1 className="text-4xl font-extrabold tracking-tight text-white xl:text-5xl">
+            Gerencie projetos, clientes e faturamento em um só lugar.
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="text-lg text-slate-300 font-light leading-relaxed">
+            Acompanhe o pipeline de desenvolvimento, controle parcelas atrasadas e veja o faturamento real do mês com clareza absoluta.
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <div className="grid grid-cols-3 gap-6 p-6 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 relative z-10">
+          <div>
+            <p className="text-2xl font-bold text-white">100%</p>
+            <p className="text-xs text-slate-400 font-medium uppercase tracking-wider mt-1">Interno e Seguro</p>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-white">Faturamento</p>
+            <p className="text-xs text-slate-400 font-medium uppercase tracking-wider mt-1">Duplo Controle</p>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-white">Pipeline</p>
+            <p className="text-xs text-slate-400 font-medium uppercase tracking-wider mt-1">Estilo Kanban</p>
+          </div>
         </div>
-      </main>
+      </div>
+
     </div>
   );
 }
