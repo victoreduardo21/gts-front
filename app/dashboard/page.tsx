@@ -13,7 +13,6 @@ import {
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-// Definição dos tipos para segurança do TypeScript
 interface Metricas {
   clientesTotais: number;
   projetosRodando: number;
@@ -31,60 +30,46 @@ interface ItemGrafico {
 }
 
 export default function Dashboard() {
-  // 1. ESTADOS: Armazenam os dados vindos do Back-end
   const [metricas, setMetricas] = useState<Metricas | null>(null);
   const [dadosGrafico, setDadosGrafico] = useState<ItemGrafico[]>([]);
   const [carregando, setCarregando] = useState<boolean>(true);
 
-  // 2. EFEITO: Dispara a busca de dados assim que entra na página
-  useEffect(() => {
-    async function buscarDadosDoBackend() {
-      try {
-        setCarregando(true);
-        
-        // Quando seu Back-end em Node estiver rodando, mude para a URL dele
-        // Exemplo: const resposta = await fetch('http://localhost:5000/api/dashboard');
-        // const dados = await resposta.json();
-        
-        // Inicializadores de segurança enquanto o back-end está sendo desenvolvido
-        const metricasVazias: Metricas = {
-          clientesTotais: 0,
-          projetosRodando: 0,
-          projetosEntregues: 0,
-          projetosPertoPrazo: 0,
-          projetosAtrasados: 0,
-          faturamentoProjetosMes: 0,
-          faturamentoRealCaixa: 0
-        };
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
-        const mesesVazios: ItemGrafico[] = [
-          { name: 'Jan', Contratos: 0, Caixa: 0 },
-          { name: 'Fev', Contratos: 0, Caixa: 0 },
-          { name: 'Mar', Contratos: 0, Caixa: 0 },
-          { name: 'Abr', Contratos: 0, Caixa: 0 },
-          { name: 'Mai', Contratos: 0, Caixa: 0 },
-          { name: 'Jun', Contratos: 0, Caixa: 0 },
-          { name: 'Jul', Contratos: 0, Caixa: 0 },
-          { name: 'Ago', Contratos: 0, Caixa: 0 },
-          { name: 'Set', Contratos: 0, Caixa: 0 },
-          { name: 'Out', Contratos: 0, Caixa: 0 },
-          { name: 'Nov', Contratos: 0, Caixa: 0 },
-          { name: 'Dez', Contratos: 0, Caixa: 0 },
-        ];
+  // 🔑 Função auxiliar para recuperar os headers com Token JWT
+  const getAuthHeaders = () => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': token ? `Bearer ${token}` : ''
+    };
+  };
 
-        setMetricas(metricasVazias);
-        setDadosGrafico(mesesVazios);
-      } catch (erro) {
-        console.error("Erro ao buscar dados do faturamento:", erro);
-      } finally {
-        setCarregando(false);
+  const carregarDadosDashboard = async () => {
+    try {
+      setCarregando(true);
+      const resposta = await fetch(`${apiUrl}/api/dashboard`, {
+        headers: getAuthHeaders()
+      });
+      
+      if (resposta.ok) {
+        const dados = await resposta.json();
+        setMetricas(dados.metricas || null);
+        setDadosGrafico(dados.grafico || []);
+      } else if (resposta.status === 401 || resposta.status === 403) {
+        window.location.href = '/';
       }
+    } catch (erro) {
+      console.error("Erro ao buscar dados do faturamento:", erro);
+    } finally {
+      setCarregando(false);
     }
+  };
 
-    buscarDadosDoBackend();
+  useEffect(() => {
+    carregarDadosDashboard();
   }, []);
 
-  // Tela de carregamento charmosa enquanto os dados trafegam pela rede
   if (carregando || !metricas) {
     return (
       <Navbar>
@@ -98,63 +83,69 @@ export default function Dashboard() {
 
   return (
     <Navbar>
-      <div className="space-y-8">
+      <div className="space-y-8 p-4 md:p-6 bg-gray-50/50 min-h-screen">
         
         {/* CABEÇALHO DA TELA */}
-        <div>
+        <div className="border-b border-gray-200 pb-4">
           <h2 className="text-2xl font-bold tracking-tight text-gray-950">Visão Geral</h2>
           <p className="text-sm text-gray-500">Acompanhe a saúde, prazos e faturamento do seu negócio ao longo do ano.</p>
         </div>
 
         {/* --- SEÇÃO 1: CONTADORES E MÉTRICAS --- */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4">
-            <div className="p-2.5 bg-slate-100 text-slate-700 rounded-lg"><Users size={20} /></div>
+          <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-4">
+            <div className="p-3 bg-slate-100 text-slate-700 rounded-xl"><Users size={20} /></div>
             <div>
-              <p className="text-xs font-medium text-gray-400 uppercase">Clientes</p>
-              <p className="text-xl font-bold text-gray-900">{metricas.clientesTotais}</p>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Clientes</p>
+              <p className="text-xl font-extrabold text-gray-900">{metricas.clientesTotais}</p>
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4">
-            <div className="p-2.5 bg-amber-50 text-amber-600 rounded-lg"><TrendingUp size={20} /></div>
+          <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-4">
+            <div className="p-3 bg-amber-50 text-amber-600 rounded-xl"><TrendingUp size={20} /></div>
             <div>
-              <p className="text-xs font-medium text-gray-400 uppercase">Em Andamento</p>
-              <p className="text-xl font-bold text-gray-900">{metricas.projetosRodando}</p>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Em Andamento</p>
+              <p className="text-xl font-extrabold text-gray-900">{metricas.projetosRodando}</p>
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4">
-            <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg"><CheckCircle2 size={20} /></div>
+          <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-4">
+            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl"><CheckCircle2 size={20} /></div>
             <div>
-              <p className="text-xs font-medium text-gray-400 uppercase">Entregues</p>
-              <p className="text-xl font-bold text-gray-900">{metricas.projetosEntregues}</p>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Entregues</p>
+              <p className="text-xl font-extrabold text-gray-900">{metricas.projetosEntregues}</p>
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4">
-            <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg"><Clock size={20} /></div>
+          <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-4">
+            <div className="p-3 bg-blue-50 text-blue-600 rounded-xl"><Clock size={20} /></div>
             <div>
-              <p className="text-xs font-medium text-gray-400 uppercase">Perto do Prazo</p>
-              <p className="text-xl font-bold text-gray-900">{metricas.projetosPertoPrazo}</p>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Perto do Prazo</p>
+              <p className="text-xl font-extrabold text-gray-900">{metricas.projetosPertoPrazo}</p>
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-xl border border-red-100 bg-red-50/20 shadow-sm flex items-center gap-4">
-            <div className="p-2.5 bg-red-50 text-red-600 rounded-lg"><AlertTriangle size={20} /></div>
+          <div className={`p-5 rounded-2xl border flex items-center gap-4 transition-colors ${
+            metricas.projetosAtrasados > 0 ? 'border-red-200 bg-red-50/50' : 'bg-white border-gray-200'
+          }`}>
+            <div className={`p-3 rounded-xl ${metricas.projetosAtrasados > 0 ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-400'}`}>
+              <AlertTriangle size={20} />
+            </div>
             <div>
-              <p className="text-xs font-medium text-gray-400 uppercase">Atrasados</p>
-              <p className="text-xl font-bold text-red-600">{metricas.projetosAtrasados}</p>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Atrasados</p>
+              <p className={`text-xl font-extrabold ${metricas.projetosAtrasados > 0 ? 'text-red-600' : 'text-gray-900'}`}>
+                {metricas.projetosAtrasados}
+              </p>
             </div>
           </div>
         </div>
 
         {/* --- SEÇÃO 2: ALERTA OPERACIONAL --- */}
         {metricas.projetosAtrasados > 0 && (
-          <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-3 text-amber-800 text-sm">
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-3 text-amber-800 text-sm shadow-sm animate-pulse">
             <AlertTriangle size={20} className="shrink-0 text-amber-600" />
             <div>
-              <span className="font-semibold">Atenção Gerencial:</span> Existe <strong>{metricas.projetosAtrasados} projeto com prazo estourado</strong>. Verifique as pendências para realizar as cobranças necessárias.
+              <span className="font-bold">Atenção Gerencial:</span> Você possui <strong>{metricas.projetosAtrasados} projeto(s) com o prazo de entrega estourado</strong>. Entre em contato com a equipe operacional para verificar o status de entrega.
             </div>
           </div>
         )}
@@ -163,13 +154,13 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex items-start justify-between">
             <div className="space-y-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+              <span className="text-xs font-bold uppercase tracking-wider text-gray-400">
                 Faturamento de Projetos (Mês)
               </span>
               <p className="text-3xl font-extrabold text-blue-600">
                 {metricas.faturamentoProjetosMes.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
               </p>
-              <p className="text-xs text-gray-500">Soma total do valor de novos projetos fechados neste mês.</p>
+              <p className="text-xs text-gray-500">Previsão e somatório de novos contratos vinculados a este mês.</p>
             </div>
             <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
               <FolderKanban size={24} />
@@ -178,13 +169,13 @@ export default function Dashboard() {
 
           <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex items-start justify-between">
             <div className="space-y-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">
-                Faturamento Normal / Caixa (Mês)
+              <span className="text-xs font-bold uppercase tracking-wider text-gray-400">
+                Faturamento Real / Caixa (Mês)
               </span>
               <p className="text-3xl font-extrabold text-emerald-600">
                 {metricas.faturamentoRealCaixa.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
               </p>
-              <p className="text-xs text-gray-500">Soma de todas as entradas e parcelas marcadas como **PAGO**.</p>
+              <p className="text-xs text-gray-500">Total acumulado líquido de parcelas marcadas como <strong>Liquidado</strong>.</p>
             </div>
             <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
               <DollarSign size={24} />
@@ -194,23 +185,23 @@ export default function Dashboard() {
 
         {/* --- SEÇÃO 4: GRÁFICO COMPARATIVO ANUAL --- */}
         <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-          <div className="mb-4">
+          <div className="mb-6">
             <h3 className="text-lg font-bold text-gray-900">Comparativo Histórico de Faturamento</h3>
-            <p className="text-xs text-gray-500">Visão lado a lado: Contratos fechados vs. Valores efetivamente recebidos por mês.</p>
+            <p className="text-xs text-gray-500">Visão integrada anual: Total contratado vs. Fluxo de caixa efetivado por mês.</p>
           </div>
           
           <div className="w-full h-80">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={dadosGrafico} margin={{ top: 20, right: 10, left: 10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} tickLine={false} />
-                <YAxis tickFormatter={(val) => `R$ ${val / 1000}k`} stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+                <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} tickLine={false} fontWeight="bold" />
+                <YAxis tickFormatter={(val) => `R$ ${val}`} stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} />
                 <Tooltip 
                   formatter={(value: any) => [value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })]}
                   contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0' }}
                 />
                 <Legend />
-                <Bar dataKey="Contratos" fill="#2563eb" radius={[4, 4, 0, 0]} name="Faturamento Projetos" />
+                <Bar dataKey="Contratos" fill="#2563eb" radius={[4, 4, 0, 0]} name="Faturamento Planejado" />
                 <Bar dataKey="Caixa" fill="#10b981" radius={[4, 4, 0, 0]} name="Faturamento Real / Caixa" />
               </BarChart>
             </ResponsiveContainer>

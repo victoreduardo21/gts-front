@@ -6,3 +6,4 @@ node_modules/
 
 # Arquivo secreto com a URL da sua API local
 .env.local
+.vercel

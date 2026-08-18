@@ -33,12 +33,23 @@ export default function Clientes() {
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
+  // Função auxiliar para recuperar os headers com Token JWT
+  const getAuthHeaders = () => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': token ? `Bearer ${token}` : ''
+    };
+  };
+
   const carregarClientes = async () => {
     try {
-      const res = await fetch(`${apiUrl}/api/clientes`);
+      const res = await fetch(`${apiUrl}/api/clientes`, {
+        headers: getAuthHeaders()
+      });
       if (res.ok) {
         const dados = await res.json();
-        setClientes(dados);
+        setClientes(dados || []);
       }
     } catch (err) {
       console.error('Erro ao buscar clientes:', err);
@@ -57,6 +68,8 @@ export default function Clientes() {
     setCpf(cliente.cpf);
     setNomeEmpresa(cliente.nomeEmpresa || '');
     setCnpj(cliente.cnpj || '');
+    setErro('');
+    setSucesso('');
     setModalAberto(true);
   };
 
@@ -68,6 +81,8 @@ export default function Clientes() {
     setCpf('');
     setNomeEmpresa('');
     setCnpj('');
+    setErro('');
+    setSucesso('');
     setModalAberto(true);
   };
 
@@ -83,7 +98,7 @@ export default function Clientes() {
     try {
       const res = await fetch(urlFinal, {
         method: metodo,
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           nome,
           telefone,
@@ -128,7 +143,8 @@ export default function Clientes() {
 
     try {
       const res = await fetch(`${apiUrl}/api/clientes/${id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: getAuthHeaders()
       });
 
       if (!res.ok) {
@@ -143,7 +159,6 @@ export default function Clientes() {
   };
 
   return (
-    // 🛠️ INSTRUÇÃO APLICADA: Todo o conteudo do gerenciamento agora vai DENTRO do componente Navbar
     <Navbar>
       <div className="w-full min-h-screen bg-gray-50 p-6 md:p-8">
         <div className="max-w-full mx-auto space-y-8">
@@ -162,7 +177,7 @@ export default function Clientes() {
 
             <button 
               onClick={abrirModalCadastro}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all shadow-md shadow-blue-500/10 active:scale-95"
+              className="flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all shadow-md shadow-blue-500/10 active:scale-95 cursor-pointer"
             >
               <Plus size={18} />
               <span>Criar Novo Cliente</span>
@@ -178,9 +193,9 @@ export default function Clientes() {
                     <Plus size={16} className="text-blue-600" /> {clienteSendoEditado ? 'Editar Cadastro do Cliente' : 'Cadastrar Novo Cliente'}
                   </h2>
                   <button 
-                    type="button"
-                    onClick={() => setModalAberto(false)}
-                    className="p-1.5 hover:bg-gray-200 rounded-lg text-gray-400 hover:text-gray-600 transition-colors"
+                    type="button" 
+                    onClick={() => setModalAberto(false)} 
+                    className="p-1.5 hover:bg-gray-200 rounded-lg text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
                   >
                     <X size={18} />
                   </button>
@@ -249,11 +264,11 @@ export default function Clientes() {
                   </div>
 
                   <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-                    <button type="button" onClick={() => setModalAberto(false)} className="px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 rounded-xl transition-all">
+                    <button type="button" onClick={() => setModalAberto(false)} className="px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 rounded-xl transition-all cursor-pointer">
                       Cancelar
                     </button>
-                    <button type="submit" className="px-5 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all shadow-md shadow-blue-500/10">
-                      {clienteSendoEditado ? 'Salvar Alteraçoes' : 'Salvar Cliente'}
+                    <button type="submit" className="px-5 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all shadow-md shadow-blue-500/10 cursor-pointer">
+                      {clienteSendoEditado ? 'Salvar Alterações' : 'Salvar Cliente'}
                     </button>
                   </div>
                 </form>
@@ -278,16 +293,16 @@ export default function Clientes() {
 
                       <div className="flex items-center gap-1 shrink-0">
                         <button 
-                          onClick={() => abrirModalEdicao(cliente)}
+                          onClick={() => abrirModalEdicao(cliente)} 
                           title="Editar cliente"
-                          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
                         >
                           <Pencil size={14} />
                         </button>
                         <button 
-                          onClick={() => handleExcluir(cliente._id)}
+                          onClick={() => handleExcluir(cliente._id)} 
                           title="Excluir cliente"
-                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                         >
                           <Trash2 size={14} />
                         </button>

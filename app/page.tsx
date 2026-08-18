@@ -1,6 +1,8 @@
 'use client';
 import { useState, FormEvent } from 'react';
-import { ShieldCheck, Mail, Lock, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
+// 1. Importação do componente Link do Next.js para navegação interna
+import Link from 'next/link';
+import { ShieldCheck, Mail, Lock, ArrowRight, AlertCircle, Loader2, UserPlus } from 'lucide-react';
 
 export default function Login() {
   const [email, setEmail] = useState<string>('');
@@ -36,14 +38,16 @@ export default function Login() {
         throw new Error(dados.erro || 'Erro ao tentar fazer login.');
       }
 
-      // Se deu tudo certo, guarda os dados do usuário na memória local do navegador
-      localStorage.setItem('@gtsconect:usuario', JSON.stringify(dados.usuario));
+      // =========================================================================
+      // 🌟 SALVANDO O TOKEN DE SEGURANÇA E DADOS DO USUÁRIO
+      // =========================================================================
+      localStorage.setItem('token', dados.token); 
+      localStorage.setItem('@gtsconect:usuario', JSON.stringify(dados.usuario)); 
       
-      console.log('Login efetuado com sucesso real!');
+      console.log('Login efetuado com sucesso!');
       window.location.href = '/dashboard'; 
 
     } catch (err) {
-      // 🔧 CORREÇÃO DO TYPESCRIPT: Captura o erro sem atribuir 'any' na assinatura e trata de forma segura
       if (err instanceof Error) {
         setErro(err.message);
       } else {
@@ -161,6 +165,17 @@ export default function Login() {
               )}
             </button>
           </form>
+
+          {/* 🌟 NOVO BLOCO: Link para a página de Criar Conta (Cadastro) */}
+          <div className="mt-8 pt-6 border-t border-gray-100 text-center">
+            <Link 
+              href="/cadastro" 
+              className="inline-flex items-center justify-center gap-2 mt-2 text-sm font-bold text-blue-600 hover:text-blue-700 hover:underline transition-all"
+            >
+              <UserPlus size={16} />
+              <span>Criar uma nova conta agora</span>
+            </Link>
+          </div>
 
         </div>
       </div>
