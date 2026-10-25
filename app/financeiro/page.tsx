@@ -29,7 +29,6 @@ export default function Financeiro() {
   const [lancamentos, setLancamentos] = useState<LancamentoFinanceiro[]>([]);
   const [modalAberto, setModalAberto] = useState(false); 
   
-  // Estados do Formulário Manual
   const [descricaoManual, setDescricaoManual] = useState('');
   const [valorManual, setValorManual] = useState('');
   const [tipoManual, setTipoManual] = useState<'Entrada' | 'Saida'>('Entrada');
@@ -59,9 +58,8 @@ export default function Financeiro() {
     { mes: 'Dez', entradas: 0, saidas: 0 },
   ]);
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
-  // 🔑 Função auxiliar para obter o cabeçalho com Token JWT
   const getAuthHeaders = () => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     return {
@@ -72,9 +70,8 @@ export default function Financeiro() {
 
   const carregarFinanceiro = async () => {
     try {
-      const res = await fetch(`${apiUrl}/api/financeiro?ano=${anoSelecionado}`, {
-        headers: getAuthHeaders()
-      });
+      let res = await fetch(`${apiUrl}/api/financeiro?ano=${anoSelecionado}`, { headers: getAuthHeaders() });
+      if (!res.ok) res = await fetch(`${apiUrl}/financeiro?ano=${anoSelecionado}`, { headers: getAuthHeaders() });
 
       if (res.ok) {
         const dados = await res.json();
@@ -90,8 +87,6 @@ export default function Financeiro() {
         if (dados.grafico && dados.grafico.length > 0) {
           setDadosGrafico(dados.grafico);
         }
-      } else if (res.status === 401 || res.status === 403) {
-        window.location.href = '/';
       }
     } catch (err) {
       console.error('Erro ao buscar dados financeiros do banco:', err);
@@ -104,16 +99,19 @@ export default function Financeiro() {
 
   const alternarStatusLiquidado = async (id: string) => {
     try {
-      const res = await fetch(`${apiUrl}/api/financeiro/${id}/status`, {
+      let res = await fetch(`${apiUrl}/api/financeiro/${id}/status`, {
         method: 'PATCH',
         headers: getAuthHeaders()
       });
+      if (!res.ok) {
+        res = await fetch(`${apiUrl}/financeiro/${id}/status`, {
+          method: 'PATCH',
+          headers: getAuthHeaders()
+        });
+      }
 
       if (res.ok) {
         carregarFinanceiro(); 
-      } else {
-        const erro = await res.json();
-        alert(erro.erro || 'Erro ao alterar status financeiro.');
       }
     } catch (err) {
       console.error('Erro ao atualizar status:', err);
@@ -123,7 +121,7 @@ export default function Financeiro() {
   const handleSalvarManual = async (e: FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch(`${apiUrl}/api/financeiro/manual`, {
+      let res = await fetch(`${apiUrl}/api/financeiro/manual`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({
@@ -134,6 +132,19 @@ export default function Financeiro() {
           status: statusManual
         })
       });
+      if (!res.ok) {
+        res = await fetch(`${apiUrl}/financeiro/manual`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({
+            descricao: descricaoManual,
+            valor: Number(valorManual),
+            tipo: tipoManual,
+            dataVencimento: dataManual,
+            status: statusManual
+          })
+        });
+      }
 
       if (res.ok) {
         setModalAberto(false);
@@ -142,9 +153,6 @@ export default function Financeiro() {
         setDataManual('');
         setStatusManual('Pendente');
         carregarFinanceiro(); 
-      } else {
-        const erro = await res.json();
-        alert(erro.erro || 'Erro ao salvar lançamento manual.');
       }
     } catch (err) {
       console.error('Erro de conexão:', err);
@@ -156,20 +164,19 @@ export default function Financeiro() {
       <div className="w-full min-h-screen bg-gray-50 p-6 md:p-8">
         <div className="max-w-full mx-auto space-y-8">
           
-          {/* Cabeçalho com Filtro e Botão Novo */}
+          {/* CABEÇALHO */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-gray-200 pb-5">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-blue-600 text-white rounded-xl shadow-md shadow-blue-500/10">
+              <div className="p-2.5 bg-blue-600 text-white rounded-xl shadow-md">
                 <DollarSign size={24} />
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-950">Fluxo Financeiro</h1>
-                <p className="text-xs text-gray-500">Controle faturamento, parcelas de clientes e histórico anual da GTS Conect.</p>
+                <p className="text-xs text-gray-500">Controle faturamento, parcelas de clientes e histórico anual.</p>
               </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
-              {/* Filtro por Ano */}
               <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-1.5 shadow-sm">
                 <span className="text-xs font-bold text-gray-500 flex items-center gap-1">
                   <Filter size={14} /> Ano:
@@ -179,20 +186,15 @@ export default function Financeiro() {
                   value={anoSelecionado}
                   onChange={(e) => setAnoSelecionado(e.target.value)}
                 >
-                  <option value="2024">2024</option>
                   <option value="2025">2025</option>
                   <option value="2026">2026</option>
                   <option value="2027">2027</option>
-                  <option value="2028">2028</option>
-                  <option value="2029">2029</option>
-                  <option value="2030">2030</option>
                 </select>
               </div>
 
-              {/* Botão Lançamento Manual */}
               <button
                 onClick={() => setModalAberto(true)}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all shadow-md shadow-blue-500/10 active:scale-95 cursor-pointer"
+                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all shadow-md active:scale-95 cursor-pointer"
               >
                 <Plus size={16} />
                 <span>Lançamento Manual</span>
@@ -200,26 +202,26 @@ export default function Financeiro() {
             </div>
           </div>
 
-          {/* MODAL FLUTUANTE DE LANÇAMENTO MANUAL */}
+          {/* MODAL LANÇAMENTO MANUAL */}
           {modalAberto && (
-            <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
+            <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
               <div className="bg-white w-full max-w-md rounded-2xl border border-gray-200 shadow-2xl overflow-hidden">
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50">
                   <h2 className="text-sm font-bold text-gray-950 flex items-center gap-2">
                     <FileText size={16} className="text-blue-600" /> Novo Lançamento Manual
                   </h2>
-                  <button type="button" onClick={() => setModalAberto(false)} className="p-1.5 hover:bg-gray-200 rounded-lg text-gray-400 hover:text-gray-600 transition-colors cursor-pointer">
+                  <button type="button" onClick={() => setModalAberto(false)} className="p-1.5 hover:bg-gray-200 rounded-lg text-gray-400 cursor-pointer">
                     <X size={18} />
                   </button>
                 </div>
 
                 <form onSubmit={handleSalvarManual} className="p-6 space-y-4">
                   <div>
-                    <label className="text-xs font-medium text-gray-600">Descrição / Fornecedor / Cliente *</label>
+                    <label className="text-xs font-medium text-gray-600">Descrição / Cliente *</label>
                     <input 
                       type="text" required 
                       className="w-full mt-1 px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 text-sm" 
-                      placeholder="Ex: Conta de Internet, Cliente Avulso..." 
+                      placeholder="Ex: Servidor, Licença, Cliente Avulso..." 
                       value={descricaoManual} onChange={e => setDescricaoManual(e.target.value)} 
                     />
                   </div>
@@ -256,7 +258,7 @@ export default function Financeiro() {
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-600">Status Inicial *</label>
+                      <label className="text-xs font-medium text-gray-600">Status *</label>
                       <select 
                         className="w-full mt-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 text-sm cursor-pointer"
                         value={statusManual} onChange={e => setStatusManual(e.target.value as 'Liquidado' | 'Pendente')}
@@ -271,8 +273,8 @@ export default function Financeiro() {
                     <button type="button" onClick={() => setModalAberto(false)} className="px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 rounded-xl transition-all cursor-pointer">
                       Cancelar
                     </button>
-                    <button type="submit" className="px-5 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all shadow-md shadow-blue-500/10 cursor-pointer">
-                      Salvar Registro
+                    <button type="submit" className="px-5 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all shadow-md cursor-pointer">
+                      Salvar
                     </button>
                   </div>
                 </form>
@@ -280,11 +282,11 @@ export default function Financeiro() {
             </div>
           )}
 
-          {/* CARDS DE RESUMO FINANCEIRO */}
+          {/* CARDS DE RESUMO */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex items-center justify-between">
+            <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-xs flex items-center justify-between">
               <div className="space-y-1">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Entradas (Mês)</p>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Pendências Entrada</p>
                 <p className="text-lg font-extrabold text-emerald-600">
                   R$ {totais.entradas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
@@ -292,9 +294,9 @@ export default function Financeiro() {
               <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg"><ArrowUpCircle size={18} /></div>
             </div>
 
-            <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex items-center justify-between">
+            <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-xs flex items-center justify-between">
               <div className="space-y-1">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Saídas (Mês)</p>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Pendências Saída</p>
                 <p className="text-lg font-extrabold text-red-600">
                   R$ {totais.saidas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
@@ -302,9 +304,9 @@ export default function Financeiro() {
               <div className="p-2 bg-red-50 text-red-600 rounded-lg"><ArrowDownCircle size={18} /></div>
             </div>
 
-            <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex items-center justify-between">
+            <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-xs flex items-center justify-between">
               <div className="space-y-1">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Saldo em Caixa</p>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Saldo Real em Caixa</p>
                 <p className={`text-lg font-extrabold ${totais.caixa >= 0 ? 'text-gray-950' : 'text-red-600'}`}>
                   R$ {totais.caixa.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
@@ -312,9 +314,9 @@ export default function Financeiro() {
               <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><Wallet size={18} /></div>
             </div>
 
-            <div className="bg-slate-900 text-white rounded-2xl border border-slate-800 p-5 shadow-sm flex items-center justify-between">
+            <div className="bg-slate-900 text-white rounded-2xl border border-slate-800 p-5 shadow-xs flex items-center justify-between">
               <div className="space-y-1">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Faturado no Ano ({anoSelecionado})</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Faturado no Ano</p>
                 <p className="text-lg font-extrabold text-emerald-400">
                   R$ {totais.faturamentoAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
@@ -322,9 +324,9 @@ export default function Financeiro() {
               <div className="p-2 bg-slate-800 text-emerald-400 rounded-lg"><ArrowUpCircle size={18} /></div>
             </div>
 
-            <div className="bg-slate-900 text-white rounded-2xl border border-slate-800 p-5 shadow-sm flex items-center justify-between">
+            <div className="bg-slate-900 text-white rounded-2xl border border-slate-800 p-5 shadow-xs flex items-center justify-between">
               <div className="space-y-1">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Saídas no Ano ({anoSelecionado})</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Saídas no Ano</p>
                 <p className="text-lg font-extrabold text-red-400">
                   R$ {totais.saidasAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
@@ -333,11 +335,11 @@ export default function Financeiro() {
             </div>
           </div>
 
-          {/* SEÇÃO DO GRÁFICO */}
-          <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm space-y-4">
+          {/* GRÁFICO */}
+          <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-xs space-y-4">
             <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
               <TrendingUp size={18} className="text-blue-600" />
-              <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Histórico de Movimentação Mensal - Ano {anoSelecionado}</h2>
+              <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Histórico de Liquidações - Ano {anoSelecionado}</h2>
             </div>
             
             <div className="overflow-x-auto pb-2">
@@ -346,24 +348,22 @@ export default function Financeiro() {
                   <div key={index} className="flex-1 flex flex-col items-center relative border-r border-gray-100 last:border-0 pb-2">
                     <div className="flex gap-1.5 items-end h-32 w-full justify-center">
                       
-                      {/* Vela de Entradas */}
                       <div className="flex flex-col items-center gap-1 w-7">
                         <div className="text-[9px] font-bold text-emerald-600 whitespace-nowrap">
                           {mesData.entradas > 0 ? `R$ ${mesData.entradas.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}` : ''}
                         </div>
                         <div 
-                          className="w-full bg-emerald-500 rounded-t-sm transition-all duration-500 shadow-sm shadow-emerald-500/10"
+                          className="w-full bg-emerald-500 rounded-t-sm transition-all duration-500 shadow-xs"
                           style={{ height: `${Math.min((mesData.entradas / 10000) * 90, 90)}px`, minHeight: mesData.entradas > 0 ? '4px' : '0px' }}
                         />
                       </div>
 
-                      {/* Vela de Saídas */}
                       <div className="flex flex-col items-center gap-1 w-7">
                         <div className="text-[9px] font-bold text-red-600 whitespace-nowrap">
                           {mesData.saidas > 0 ? `R$ ${mesData.saidas.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}` : ''}
                         </div>
                         <div 
-                          className="w-full bg-red-500 rounded-t-sm transition-all duration-500 shadow-sm shadow-red-500/10"
+                          className="w-full bg-red-500 rounded-t-sm transition-all duration-500 shadow-xs"
                           style={{ height: `${Math.min((mesData.saidas / 10000) * 90, 90)}px`, minHeight: mesData.saidas > 0 ? '4px' : '0px' }}
                         />
                       </div>
@@ -378,8 +378,8 @@ export default function Financeiro() {
             </div>
           </div>
 
-          {/* TABELA DE LANÇAMENTOS */}
-          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+          {/* TABELA */}
+          <div className="bg-white border border-gray-200 rounded-2xl shadow-xs overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
               <h2 className="text-sm font-bold text-gray-950 uppercase tracking-wider">Lançamentos do Ano {anoSelecionado}</h2>
             </div>
@@ -443,7 +443,7 @@ export default function Financeiro() {
                           onClick={() => alternarStatusLiquidado(item._id)}
                           className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all active:scale-95 border cursor-pointer ${
                             item.status === 'Liquidado'
-                              ? 'bg-emerald-600 text-white border-emerald-700 hover:bg-emerald-700 shadow-sm shadow-emerald-600/10'
+                              ? 'bg-emerald-600 text-white border-emerald-700 hover:bg-emerald-700'
                               : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
                           }`}
                         >

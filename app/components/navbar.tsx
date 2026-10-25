@@ -26,6 +26,7 @@ export default function SistemaLayout({ children }: LayoutProps) {
     { nome: 'Dashboard', rota: '/dashboard', icone: <LayoutDashboard size={20} /> },
     { nome: 'Clientes', rota: '/clientes', icone: <Users size={20} /> },
     { nome: 'Projetos', rota: '/projetos', icone: <FolderKanban size={20} /> },
+    { nome: 'Mensalidades', rota: '/mensalidades', icone: <CreditCard size={20} /> },
     { nome: 'Pipeline', rota: '/pipeline', icone: <Kanban size={20} /> },
     { nome: 'Agendamentos', rota: '/agendamentos', icone: <CalendarDays size={20} /> },
     { nome: 'Financeiro', rota: '/financeiro', icone: <DollarSign size={20} /> },
@@ -79,7 +80,7 @@ export default function SistemaLayout({ children }: LayoutProps) {
           </nav>
         </div>
 
-        {/* Rodapé da Sidebar - Botão de Sair com Limpeza de Sessão */}
+        {/* Rodapé da Sidebar */}
         <div className="p-4 border-t border-slate-800">
           <button
             onClick={handleLogout}
@@ -94,8 +95,6 @@ export default function SistemaLayout({ children }: LayoutProps) {
 
       {/* CONTEÚDO PRINCIPAL */}
       <main className="flex-1 overflow-y-auto bg-slate-50 flex flex-col min-w-0">
-        
-        {/* Barra de topo interna */}
         <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 sticky top-0 z-10 shrink-0">
           <h1 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">
             Painel Interno de Controle
@@ -108,7 +107,6 @@ export default function SistemaLayout({ children }: LayoutProps) {
           </div>
         </header>
 
-        {/* Renderização das Telas Filhas */}
         <div className="flex-1">
           {children}
         </div>
