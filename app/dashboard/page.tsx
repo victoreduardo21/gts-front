@@ -34,9 +34,8 @@ export default function Dashboard() {
   const [dadosGrafico, setDadosGrafico] = useState<ItemGrafico[]>([]);
   const [carregando, setCarregando] = useState<boolean>(true);
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
-  // 🔑 Função auxiliar para recuperar os headers com Token JWT
   const getAuthHeaders = () => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     return {
@@ -48,13 +47,27 @@ export default function Dashboard() {
   const carregarDadosDashboard = async () => {
     try {
       setCarregando(true);
-      const resposta = await fetch(`${apiUrl}/api/dashboard`, {
+      let resposta = await fetch(`${apiUrl}/api/dashboard`, {
         headers: getAuthHeaders()
       });
       
+      if (!resposta.ok) {
+        resposta = await fetch(`${apiUrl}/dashboard`, {
+          headers: getAuthHeaders()
+        });
+      }
+
       if (resposta.ok) {
         const dados = await resposta.json();
-        setMetricas(dados.metricas || null);
+        setMetricas(dados.metricas || {
+          clientesTotais: 0,
+          projetosRodando: 0,
+          projetosEntregues: 0,
+          projetosPertoPrazo: 0,
+          projetosAtrasados: 0,
+          faturamentoProjetosMes: 0,
+          faturamentoRealCaixa: 0
+        });
         setDadosGrafico(dados.grafico || []);
       } else if (resposta.status === 401 || resposta.status === 403) {
         window.location.href = '/';
@@ -85,15 +98,15 @@ export default function Dashboard() {
     <Navbar>
       <div className="space-y-8 p-4 md:p-6 bg-gray-50/50 min-h-screen">
         
-        {/* CABEÇALHO DA TELA */}
+        {/* CABEÇALHO */}
         <div className="border-b border-gray-200 pb-4">
           <h2 className="text-2xl font-bold tracking-tight text-gray-950">Visão Geral</h2>
           <p className="text-sm text-gray-500">Acompanhe a saúde, prazos e faturamento do seu negócio ao longo do ano.</p>
         </div>
 
-        {/* --- SEÇÃO 1: CONTADORES E MÉTRICAS --- */}
+        {/* MÉTRICAS OPERACIONAIS */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-4">
+          <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs flex items-center gap-4">
             <div className="p-3 bg-slate-100 text-slate-700 rounded-xl"><Users size={20} /></div>
             <div>
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Clientes</p>
@@ -101,7 +114,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-4">
+          <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs flex items-center gap-4">
             <div className="p-3 bg-amber-50 text-amber-600 rounded-xl"><TrendingUp size={20} /></div>
             <div>
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Em Andamento</p>
@@ -109,7 +122,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-4">
+          <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs flex items-center gap-4">
             <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl"><CheckCircle2 size={20} /></div>
             <div>
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Entregues</p>
@@ -117,7 +130,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-4">
+          <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs flex items-center gap-4">
             <div className="p-3 bg-blue-50 text-blue-600 rounded-xl"><Clock size={20} /></div>
             <div>
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Perto do Prazo</p>
@@ -140,9 +153,9 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* --- SEÇÃO 2: ALERTA OPERACIONAL --- */}
+        {/* ALERTA SE HOUVER PROJETOS ATRASADOS */}
         {metricas.projetosAtrasados > 0 && (
-          <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-3 text-amber-800 text-sm shadow-sm animate-pulse">
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-3 text-amber-800 text-sm shadow-xs animate-pulse">
             <AlertTriangle size={20} className="shrink-0 text-amber-600" />
             <div>
               <span className="font-bold">Atenção Gerencial:</span> Você possui <strong>{metricas.projetosAtrasados} projeto(s) com o prazo de entrega estourado</strong>. Entre em contato com a equipe operacional para verificar o status de entrega.
@@ -150,15 +163,15 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* --- SEÇÃO 3: SEPARAÇÃO DE FATURAMENTO DUPLO (CARDS) --- */}
+        {/* CARDS DE FATURAMENTO DUPLO */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex items-start justify-between">
+          <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-xs flex items-start justify-between">
             <div className="space-y-2">
               <span className="text-xs font-bold uppercase tracking-wider text-gray-400">
                 Faturamento de Projetos (Mês)
               </span>
               <p className="text-3xl font-extrabold text-blue-600">
-                {metricas.faturamentoProjetosMes.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                {(metricas.faturamentoProjetosMes || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
               </p>
               <p className="text-xs text-gray-500">Previsão e somatório de novos contratos vinculados a este mês.</p>
             </div>
@@ -167,13 +180,13 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex items-start justify-between">
+          <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-xs flex items-start justify-between">
             <div className="space-y-2">
               <span className="text-xs font-bold uppercase tracking-wider text-gray-400">
                 Faturamento Real / Caixa (Mês)
               </span>
               <p className="text-3xl font-extrabold text-emerald-600">
-                {metricas.faturamentoRealCaixa.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                {(metricas.faturamentoRealCaixa || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
               </p>
               <p className="text-xs text-gray-500">Total acumulado líquido de parcelas marcadas como <strong>Liquidado</strong>.</p>
             </div>
@@ -183,8 +196,8 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* --- SEÇÃO 4: GRÁFICO COMPARATIVO ANUAL --- */}
-        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+        {/* GRÁFICO COMPARATIVO ANUAL */}
+        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-xs">
           <div className="mb-6">
             <h3 className="text-lg font-bold text-gray-900">Comparativo Histórico de Faturamento</h3>
             <p className="text-xs text-gray-500">Visão integrada anual: Total contratado vs. Fluxo de caixa efetivado por mês.</p>
@@ -197,7 +210,7 @@ export default function Dashboard() {
                 <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} tickLine={false} fontWeight="bold" />
                 <YAxis tickFormatter={(val) => `R$ ${val}`} stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} />
                 <Tooltip 
-                  formatter={(value: any) => [value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })]}
+                  formatter={(value: any) => [Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })]}
                   contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0' }}
                 />
                 <Legend />
